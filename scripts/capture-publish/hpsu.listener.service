@@ -1,7 +1,0 @@
-[Unit]
-Description=HPSU LISTENER Daemon
-
-[Service]
-Type=simple
-ExecStart=/home/pi/hpsu.listener.sh
-PIDFile=/tmp/hpsu.listener.pid
