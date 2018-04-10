@@ -162,28 +162,7 @@ def main(argv):
         print("Error, please specify a correct language [%s]" % " ".join(languages))
         sys.exit(9)
 
-    n_hpsu = HPSU(driver=driver, logger=logger, port=port, cmd=cmd, lg_code=lg_code)
-    #print(n_hpsu.command_dict['version'])
-
-
-
-    #
-    # Print help
-    #
-    if show_help:
-        if len(cmd) == 0:
-            print("List available commands:")
-            print("%12s - %-10s" % ('COMMAND', 'LABEL'))
-            print("%12s---%-10s" % ('------------', '----------'))
-            for cmd in n_hpsu.command_dict:
-                if cmd not in "version":
-                    print("%12s - %-10s" % (n_hpsu.command_dict[cmd]['name'], n_hpsu.command_dict[cmd]['label']))
-        else:
-            print("%12s - %-10s - %s" % ('COMMAND', 'LABEL', 'DESCRIPTION'))
-            print("%12s---%-10s---%s" % ('------------', '----------', '---------------------------------------------------'))
-            for c in n_hpsu.commands:
-                print("%12s - %-10s - %s" % (c['name'], c['label'], c['desc']))
-        sys.exit(0)
+    
 
 # try to query different commands in different periods
 # Read them from config and group them
@@ -191,18 +170,19 @@ def main(argv):
     # create dictionary for the jobs
     timed_jobs=dict()
     if read_from_conf_file: 
-        if len(config.options('JOBS')):
-            for each_key in config.options('JOBS'):
-                job_period=config.get('JOBS',each_key)
-                if not job_period in timed_jobs.keys():
-                    timed_jobs["timer_" + job_period]=[]
-                timed_jobs["timer_" + job_period].append(each_key)
+        if len(config.options('JOBS')):                                 
+            for each_key in config.options('JOBS'):                         # jor each command configured in file
+                job_period=config.get('JOBS',each_key)                      # get the period 
+                if not "timer_" + job_period in timed_jobs.keys():          # if the schedule does not exist, 
+                    timed_jobs["timer_" + job_period]=[]                    # create it
+                timed_jobs["timer_" + job_period].append(each_key)          # add the command to the schedule
+                
             wanted_periods=list(timed_jobs.keys())
-        
+
         else:
             print("Error, please specify a value to query in config file ")
             sys.exit(9)
-
+  
 
     
 
@@ -220,12 +200,31 @@ def main(argv):
                     for job in timed_jobs[period_string]:
                         collected_cmds.append(str(job))
             if len(collected_cmds):
+                n_hpsu = HPSU(driver=driver, logger=logger, port=port, cmd=collected_cmds, lg_code=lg_code)
                 exec('thread_%s = threading.Thread(target=read_can, args=(driver,logger,port,collected_cmds,lg_code,verbose,output_type))' % (period))
                 exec('thread_%s.start()' % (period))
             time.sleep(1)
     else:
-        hpsu = read_can(driver, logger, port, cmd, lg_code,verbose,output_type)
+        n_hpsu = HPSU(driver=driver, logger=logger, port=port, cmd=cmd, lg_code=lg_code)
 
+        #
+        # Print help if called
+        #
+        if show_help:
+            if len(cmd) == 0 or not cmd:
+                print("List available commands:")
+                print("%12s - %-10s" % ('COMMAND', 'LABEL'))
+                print("%12s---%-10s" % ('------------', '----------'))
+                for cmd in n_hpsu.command_dict:
+                    if cmd not in "version":
+                        print("%12s - %-10s" % (n_hpsu.command_dict[cmd]['name'], n_hpsu.command_dict[cmd]['label']))
+            else:
+                print("%12s - %-10s - %s" % ('COMMAND', 'LABEL', 'DESCRIPTION'))
+                print("%12s---%-10s---%s" % ('------------', '----------', '---------------------------------------------------'))
+                for c in n_hpsu.commands:
+                    print("%12s - %-10s - %s" % (c['name'], c['label'], c['desc']))
+            sys.exit(0)
+        hpsu = read_can(driver, logger, port, cmd, lg_code,verbose,output_type)
 
 
 
@@ -236,8 +235,7 @@ def read_can(driver,logger,port,cmd,lg_code,verbose,output_type):
     ##if not driver:
     ##    print("Error, please specify driver [ELM327 or PYCAN, EMU, HPSUD]")
     ##    sys.exit(9)        
-
-    arrResponse = []   
+    arrResponse = []
     for c in n_hpsu.commands:
         if c['name'] not in "version":
             setValue = None

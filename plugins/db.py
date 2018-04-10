@@ -80,6 +80,11 @@ class Db():
         self.commands_file_version=self.hpsu.command_dict['version']['desc']
         self.db_conn= mysql.connector.connect(**self.db_params)
         cursor=self.db_conn.cursor()
+        cursor.execute("SHOW TABLES LIKE 'command'")
+        result=cursor.fetchone()
+        if not result:
+            self.CreateTableCommand(cursor)
+
         cursor.execute("SELECT descr from commands WHERE name = 'version'")
         commands_db_version=cursor.fetchall()
         if commands_db_version:
@@ -96,7 +101,7 @@ class Db():
                 self.update_db(cursor)
         
         else:
-            # insert version info
+            # insert version info            
             InsertQuery="INSERT INTO commands (name,descr) VALUES ('%s','%s')" %  (self.hpsu.command_dict['version']['name'],self.hpsu.command_dict['version']['desc'])
             cursor.execute(InsertQuery)
             # and insert all the commands   
@@ -138,7 +143,22 @@ class Db():
         self.push_conn.close()
 
    
-
+    def CreateTableCommand(self,cursor):
+        CreateQuery="""CREATE TABLE IF NOT EXISTS `commands` (`name` varchar(40) COLLATE utf8_bin NOT NULL,
+                `descr` text CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL,
+                `label` text COLLATE utf8_bin NOT NULL,
+                `command` varchar(21) COLLATE utf8_bin NOT NULL,
+                `receiver_id` int(4) NOT NULL,
+                `um` varchar(5) COLLATE utf8_bin NOT NULL,
+                `divisor` int(4) NOT NULL,
+                `readwrite` varchar(1) COLLATE utf8_bin NOT NULL,
+                `current_value` float NOT NULL,
+                `timestamp` varchar(20) COLLATE utf8_bin NOT NULL,
+                PRIMARY KEY (`name`),
+                UNIQUE KEY `name` (`name`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='stores all known commands and their last seen value';"""
+                
+        cursor.execute(CreateQuery)
 
 if __name__ == '__main__':
     app = db()
